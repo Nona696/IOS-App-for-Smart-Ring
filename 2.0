@@ -1,0 +1,64 @@
+import { useState, useEffect } from "react";
+import { BleClient, BleDevice } from '@capacitor/bluetooth-le';
+import { toast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+const SMART_RING_SERVICE = "381606E4-41E8-E790-19E3-C3E96F47E38B"; 
+
+const useBluetoothManager = () => {
+  const [device, setDevice] = useState<BleDevice | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const initializeBLE = async () => {
+      try {
+        await BleClient.initialize();
+      } catch (error) {
+        toast({ title: "Bluetooth Error", description: "Failed to initialize Bluetooth", variant: "destructive" });
+      }
+    };
+    initializeBLE();
+  }, []);
+
+  const scanAndConnect = async () => {
+    try {
+      const device = await BleClient.requestDevice({ services: [SMART_RING_SERVICE], name: 'SmartRing' });
+      await BleClient.connect(device.deviceId);
+      setDevice(device);
+      setIsConnected(true);
+      toast({ title: "Connected", description: "Successfully connected to Smart Ring" });
+    } catch (error) {
+      toast({ title: "Connection Error", description: "Failed to connect to Smart Ring", variant: "destructive" });
+    }
+  };
+
+  const disconnect = async () => {
+    if (device) {
+      await BleClient.disconnect(device.deviceId);
+      setDevice(null);
+      setIsConnected(false);
+    }
+  };
+
+  return { isConnected, scanAndConnect, disconnect };
+};
+
+const Index = () => {
+  const { isConnected, scanAndConnect, disconnect } = useBluetoothManager();
+
+  return (
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Smart Ring Monitor</h1>
+          <Button onClick={isConnected ? disconnect : scanAndConnect} variant={isConnected ? "destructive" : "default"}>
+            {isConnected ? "Disconnect" : "Connect Smart Ring"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Index;
